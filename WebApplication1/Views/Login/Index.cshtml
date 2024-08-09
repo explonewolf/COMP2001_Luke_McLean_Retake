@@ -1,29 +1,21 @@
 ﻿@model WebApplication1.Models.LoginModel
 
-@{
-    ViewData["Title"] = "Login";
-}
+@{ ViewData["Title"] = "Login"; }
 
 <h1>@ViewData["Title"]</h1>
 
-<form asp-action="Index" method="post">
-    <div class="form-group">
-        <label asp-for="UserName" class="control-label">Username</label>
-        <input asp-for="UserName" class="form-control" />
-        <span asp-validation-for="UserName" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Email" class="control-label">Email</label>
-        <input asp-for="Email" class="form-control" />
-        <span asp-validation-for="Email" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <label asp-for="Password" class="control-label">Password</label>
-        <input asp-for="Password" class="form-control" type="password" />
-        <span asp-validation-for="Password" class="text-danger"></span>
-    </div>
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Login</button>
-    </div>
-</form>
-
+@using (Html.BeginForm("Index", "Login", FormMethod.Post, new { id = "adForm" }))
+{
+<div class="form-group">
+    <label asp-for="UserName" class="control-label">Username</label>
+    @Html.TextBoxFor(m => m.UserName, new { @class = "textbox-normal", style = "width:300px" })
+</div>
+                <div class="form-group">
+                    <label asp-for="Email" class="control-label">Email</label>
+                    @Html.TextBoxFor(m => m.Email, new { @class = "textbox-normal", style = "width:300px" })
+                </div>
+                                <div class="form-group">
+                                    <label asp-for="Password" class="control-label">Password</label>
+                                    @Html.TextBoxFor(m => m.Password, new { @class = "textbox-normal", style = "width:300px" })
+                                </div>
+                                                <button type="submit" class="button-reverse">Save</button>}

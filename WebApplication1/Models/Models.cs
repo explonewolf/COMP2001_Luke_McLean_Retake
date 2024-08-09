@@ -30,18 +30,18 @@ namespace WebApplication1.Models
     }
     public class LoginModel
     {
-        [Required]
-        [Display(Name = "UserName")]
+        //[Required]
+        //[Display(Name = "UserName")]
         public string UserName { get; set; }
 
-        [Required]
-        [EmailAddress]
-        [Display(Name = "Email")]
+        //[Required]
+        //[EmailAddress]
+        //[Display(Name = "Email")]
         public string Email { get; set; }
 
-        [Required]
-        [DataType(DataType.Password)]
-        [Display(Name = "Password")]
+        //[Required]
+        //[DataType(DataType.Password)]
+        //[Display(Name = "Password")]
         public string Password { get; set; }
     }
 }
