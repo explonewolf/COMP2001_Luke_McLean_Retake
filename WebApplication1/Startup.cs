@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -5,11 +6,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging; // Added for logging
 using Microsoft.OpenApi.Models;
 using System;
 using WebApplication1.Data;
 using WebApplication1.Services;
-using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace WebApplication1
 {
@@ -22,9 +23,13 @@ namespace WebApplication1
 
         public IConfiguration Configuration { get; }
 
+        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Add distributed memory cache for session management
             services.AddDistributedMemoryCache();
+
+            // Configure session state
             services.AddSession(options =>
             {
                 options.IdleTimeout = TimeSpan.FromMinutes(20);
@@ -32,15 +37,21 @@ namespace WebApplication1
                 options.Cookie.IsEssential = true;
             });
 
+            // Add database context with SQL Server configuration
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
 
+            // Add HttpClient service for API calls
+            services.AddHttpClient();
+
+            // Register application services (like authentication service)
+            services.AddScoped<IAuthService, AuthService>();
+
+            // Configure MVC with controllers and views
             services.AddControllersWithViews();
             services.AddRazorPages();
 
-            services.AddHttpClient(); // Registers HttpClient
-            services.AddScoped<IAuthService, AuthService>();
-
+            // Add and configure Swagger for API documentation
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -52,6 +63,7 @@ namespace WebApplication1
                 c.DescribeAllParametersInCamelCase();
             });
 
+            // Add CORS policy to allow requests from any origin
             services.AddCors(options =>
             {
                 options.AddPolicy("AllowAllOrigins",
@@ -63,6 +75,7 @@ namespace WebApplication1
                     });
             });
 
+            // Configure authentication with cookies
             services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
                 {
@@ -71,10 +84,15 @@ namespace WebApplication1
                     options.AccessDeniedPath = "/AccessDenied";
                 });
 
+            // Add logging service
+            services.AddLogging();
+
+            // Add authorization service
             services.AddAuthorization();
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger) // Add logger here
         {
             if (env.IsDevelopment())
             {
@@ -86,26 +104,41 @@ namespace WebApplication1
                 app.UseHsts();
             }
 
+            // Enable HTTPS redirection
             app.UseHttpsRedirection();
+
+            // Enable serving static files
             app.UseStaticFiles();
+
+            // Configure routing
             app.UseRouting();
 
+            // Enable CORS
             app.UseCors("AllowAllOrigins");
 
-            app.UseAuthentication(); // Ensure authentication middleware is used
-            app.UseAuthorization();  // Ensure authorization middleware is used
+            // Enable authentication and authorization
+            app.UseAuthentication();
+            app.UseAuthorization();
 
+            // Enable session management
             app.UseSession();
 
-            // Protect all pages including Swagger UI
+            // Log a message when the application starts
+            logger.LogInformation("Application started at {Time}", DateTime.UtcNow);
+
+            // Middleware to protect pages, redirecting to login if not authenticated
             app.Use(async (context, next) =>
             {
                 var path = context.Request.Path.Value;
+
+                // Log request path and authentication status
+                logger.LogInformation("Request for path: {Path}, IsAuthenticated: {IsAuthenticated}", path, context.User.Identity.IsAuthenticated);
 
                 // Check if the user is authenticated
                 if (path != "/Login" && !context.User.Identity.IsAuthenticated)
                 {
                     // Redirect to login page if not authenticated
+                    logger.LogWarning("User is not authenticated, redirecting to Login page.");
                     context.Response.Redirect("/Login");
                     return;
                 }
@@ -113,17 +146,17 @@ namespace WebApplication1
                 await next();
             });
 
+            // Configure endpoints
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-                endpoints.MapControllers();
                 endpoints.MapRazorPages();
             });
 
-            // Enable Swagger middleware
+            // Enable Swagger middleware for API documentation
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
